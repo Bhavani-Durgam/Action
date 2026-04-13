@@ -9,24 +9,53 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4   # ✅ updated
 
     - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-      # till here we have setup the ssh key and added the host to known hosts on ubuntu agent
+
+    - name: Test SSH Connection
+      run: |
+        ssh -vvv -o IdentitiesOnly=yes -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "echo ✅ Connected"
+
     - name: Deploy to EC2
       run: |
-        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-          cd /home/ubuntu/app || git clone https://github.com/your-username/your-repo.git /home/ubuntu/app
-          cd /home/ubuntu/app
+        ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} << EOF
+          set -e
+
+          echo "🚀 Starting deployment..."
+
+          # Install packages (Amazon Linux uses yum)
+          sudo yum update -y
+          sudo yum install -y python3 git
+
+          # Clone repo if not exists
+          if [ ! -d "/home/ec2-user/app" ]; then
+            git clone https://github.com/your-username/your-repo.git /home/ec2-user/app
+          fi
+
+          cd /home/ec2-user/app
+
+          # Pull latest code
           git pull origin main
+
+          # Install dependencies
           pip3 install -r requirements.txt
+
+          # Stop old app
           pkill -f app.py || true
+
+          # Run app
           nohup python3 app.py > output.log 2>&1 &
+
+          echo "✅ Deployment completed"
         EOF
