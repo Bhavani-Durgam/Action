@@ -5,5 +5,5 @@ resource "aws_instance" "example_server" {
   tags = {
     Name = "Terraform-EC2-Example"
   }
-}
+} 
 
