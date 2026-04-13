@@ -6,3 +6,4 @@ resource "aws_instance" "example_server" {
     Name = "Terraform-EC2-Example"
   }
 }
+
