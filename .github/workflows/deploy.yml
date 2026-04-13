@@ -9,24 +9,57 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # ✅ avoid Node 20 warning
 
+    steps:
+    # 🔹 Step 1: Checkout code
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 🔹 Step 2: Setup SSH key
     - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-      # till here we have setup the ssh key and added the host to known hosts on ubuntu agent
+
+    # 🔹 Step 3: Test SSH connection (debug step)
+    - name: Test SSH Connection
+      run: |
+        ssh -vvv -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo ✅ Connected Successfully"
+
+    # 🔹 Step 4: Deploy application
     - name: Deploy to EC2
       run: |
-        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-          cd /home/ubuntu/app || git clone https://github.com/your-username/your-repo.git /home/ubuntu/app
+        ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << EOF
+          set -e
+
+          echo "🚀 Starting deployment..."
+
+          # Install required packages (only first time)
+          sudo apt update -y
+          sudo apt install -y python3 python3-pip git
+
+          # Clone repo if not exists
+          if [ ! -d "/home/ubuntu/app" ]; then
+            git clone https://github.com/your-username/your-repo.git /home/ubuntu/app
+          fi
+
           cd /home/ubuntu/app
+
+          # Pull latest code
           git pull origin main
+
+          # Install dependencies
           pip3 install -r requirements.txt
+
+          # Stop old app if running
           pkill -f app.py || true
+
+          # Start app in background
           nohup python3 app.py > output.log 2>&1 &
+
+          echo "✅ Deployment completed!"
         EOF
