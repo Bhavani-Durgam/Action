@@ -44,7 +44,7 @@ jobs:
 
           # Clone repo if not exists
           if [ ! -d "/home/ubuntu/app" ]; then
-            git clone https://github.com/your-username/your-repo.git /home/ubuntu/app
+            git clone https://github.com/Bhavani-Durgam/Action.git /home/ubuntu/app
           fi
 
           cd /home/ubuntu/app
