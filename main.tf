@@ -7,3 +7,4 @@ resource "aws_instance" "example_server" {
   }
 } 
 
+  
