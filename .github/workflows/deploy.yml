@@ -40,7 +40,7 @@ jobs:
 
           # Clone repo if not exists
           if [ ! -d "/home/ec2-user/app" ]; then
-            git clone https://github.com/your-username/your-repo.git /home/ec2-user/app
+            git clone https://github.com/Bhavani-Durgam/Action.git /home/ec2-user/app
           fi
 
           cd /home/ec2-user/app
